@@ -9,7 +9,7 @@ end test_sim;
 
 architecture Behavioral of test_sim is
 
-	COMPONENT md16
+	COMPONENT singleDouble
 	PORT(
     clk_i   :  in  std_logic;
     ce_i    :  in  std_logic;    
@@ -31,7 +31,7 @@ architecture Behavioral of test_sim is
   signal reset : std_logic := '1';
 begin
 
-	Inst_md16: md16 PORT MAP(
+	Inst_singleDouble: singleDouble PORT MAP(
     clk_i =>  clk,
     ce_i  =>  ce_i,
     rst_i  =>  reset,

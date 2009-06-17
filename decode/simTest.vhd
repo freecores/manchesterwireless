@@ -10,7 +10,7 @@ end sim_test;
 
 architecture Behavioral of sim_test is
 
-	COMPONENT twoToOne
+	COMPONENT decode
 	PORT(
     clk_i     : in  std_logic;
     rst_i     : in  std_logic;
@@ -41,7 +41,7 @@ architecture Behavioral of sim_test is
   
 begin
 
-	Inst_twoToOne: twoToOne PORT MAP(
+	Inst_decode: decode PORT MAP(
 		clk_i     => clk_i,
 		rst_i     => rst_i,
 		encoded_i => encoded_i,
