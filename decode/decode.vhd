@@ -11,11 +11,8 @@
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 -- Lesser General Public License for more details.
 --
--- twoToOne.vhd
---
---  Revision  Date        Author                Comment
---  --------  ----------  --------------------  ----------------
---  1.0       09/06/09    S. Green              Initial version
+-- Decodes manchester encoded data
+-- 
 -----------------------------------------------------------------------------
 
 library IEEE;
@@ -23,15 +20,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 use work.globals.all;
 
--- For encoded_i:
---
--- 0000 = null
--- 0001 = single one
--- 0010 = double one
--- 0100 = single zero
--- 1000 = double zero
-
-entity twoToOne is
+entity decode is
 
   port (
     clk_i     : in  std_logic;
@@ -42,16 +31,16 @@ entity twoToOne is
     nd_o      : out std_logic
   );
 
-end twoToOne;
+end;
 
-architecture Behavioral of twoToOne is
+architecture behavioral of decode is
 
   type state_type is (reset, pause, one_0, one_1, two_0, two_1);
   signal state, next_state : state_type;
 
   -- *2 comes from each bit in the word is manchester encoded.
   -- +2 comes from protocol transmitting -------_ to initiate
-  -- a transmission
+  -- a transmission; +1 from the ------- and +1 from the _
   constant STRING_LENGTH : integer := WORD_LENGTH*2+2;
   -- the range -1 comes from the state machine which will
   -- update index_n while the protocol finishes transmission
@@ -61,7 +50,7 @@ architecture Behavioral of twoToOne is
   signal nd_o_buff : std_logic;
 begin
 
-  process(nd_i, rst_i)
+  controller : process(nd_i, rst_i)
   begin
     if rst_i = '1' then
 
@@ -78,11 +67,11 @@ begin
       -- 
       -- processing stops when the WORD_LENGTH bits have arrived (nd_o_buff = '1')
       if STRING_LENGTH - index >= 3 and nd_o_buff = '0' then
-        -- update one or two?
+        -- Adding a single/double zero/one?
         if index - index_n = 2 then -- update 2
-          str_buffer(index downto index-1) <= insert;
+          str_buffer(index downto index-1) <= insert; -- insert double
         else -- update 1
-          str_buffer(index) <= insert(1);
+          str_buffer(index) <= insert(1); -- insert single
         end if;
       end if;
        
@@ -142,6 +131,14 @@ begin
     end case;
   end process;
 
+  -- For encoded_i:
+  --
+  -- 0000 = null
+  -- 0001 = single one
+  -- 0010 = double one
+  -- 0100 = single zero
+  -- 1000 = double zero  
+
   next_state_decode: process(state, encoded_i)
   begin
     next_state <= state;
@@ -152,13 +149,16 @@ begin
 
       when pause =>
 
-        next_state <= one_1; -- only if we came from reset
-
+        next_state <= one_1; -- only if we came from reset. The long
+        -- initialization string of ones --------- is considered a 
+        -- single one.
+        
       when one_0 =>
 
         case(encoded_i) is
           when "0100" => next_state <= one_0; -- remain here until change
-          when "0001" => next_state <= one_1;         
+          when "0001" => next_state <= one_1; -- because of the protocol, a 
+          -- single 0 can only be followed by a single one.        
           when others => next_state <= reset; -- only on error
         end case;
       
@@ -196,7 +196,7 @@ begin
   end process;
 
   -- decoded!
-  process(clk_i, rst_i)
+  rearrange : process(clk_i, rst_i)
   begin
     if rst_i = '1' then
       decoded_o <= (others => '0');
@@ -221,5 +221,5 @@ begin
     end if;
   end process;
 
-end Behavioral;
+end;
 

@@ -11,10 +11,9 @@
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 -- Lesser General Public License for more details.
 --
+-- Waits for data_i to high for INTERVAL_QUADRUPLE FPGA clocks then
+-- sends ready_o high
 --
---  Revision  Date        Author                Comment
---  --------  ----------  --------------------  ----------------
---  1.0       09/06/09    S. Green              Initial version
 -----------------------------------------------------------------------------
 
 library ieee;
@@ -29,7 +28,7 @@ entity waitForStart is
     rst_i : in std_logic;           
     ready_o : out  std_logic
   );           
-end waitForStart;
+end;
 
 architecture behavioral of waitForStart is
 begin
@@ -57,5 +56,5 @@ begin
     end if;        
   end process;
  
- end behavioral;
+ end;
 

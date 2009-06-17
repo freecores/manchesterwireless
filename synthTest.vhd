@@ -19,7 +19,7 @@ end synthTest;
 
 architecture Behavioral of synthTest is
 
-  component decodeManchester
+  component manchesterWireless
   port (
     clk_i             : in  std_logic;
     rst_i             : in  std_logic;
@@ -32,7 +32,6 @@ architecture Behavioral of synthTest is
   end component; 
 
   signal decode_output : std_logic_vector(WORD_LENGTH-1 downto 0);
-  -- up/down and left/right buffers
   signal ud_buff1, ud_buff1_reg : std_logic_vector(6 downto 0);
   signal reset_manchester, soft_reset, ready_o_buff : std_logic;
 begin
@@ -42,7 +41,7 @@ begin
   reset_manchester <=  rst_i or soft_reset;
   ready_o <= ready_o_buff;
 
-  inst_decodeManchester: decodeManchester
+  inst_manchesterWireless : manchesterWireless
   port map(
     clk_i   => clk_i,
     rst_i   => reset_manchester,
@@ -53,7 +52,7 @@ begin
     waitforstart_rdy => waitforstart_rdy
   );
   
-  -- decode up/down first digit (ones place)
+  -- decode digit
   with decode_output(3 downto 0) select
      ud_buff1  <= "0000001" when x"0",  -- off
                    "1001111" when x"1",  -- 1

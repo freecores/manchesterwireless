@@ -22,7 +22,7 @@ use ieee.std_logic_1164.all;
 
 use work.globals.all;
 
-entity decodeManchester is
+entity manchesterWireless is
   port ( 
     clk_i   : in  std_logic;
     rst_i   : in  std_logic;
@@ -32,9 +32,9 @@ entity decodeManchester is
     recieved_debug : out std_logic_vector(3 downto 0);
     waitforstart_rdy : out std_logic
   );
-end decodeManchester;
+end;
 
-architecture behavioral of decodeManchester is
+architecture behavioral of manchesterWireless is
 
   component waitForStart
   port (
@@ -45,7 +45,7 @@ architecture behavioral of decodeManchester is
   );
   end component; 
   
-  component md16
+  component singleDouble
   port (
     clk_i   :  in  std_logic;
     ce_i    :  in  std_logic;    
@@ -56,7 +56,7 @@ architecture behavioral of decodeManchester is
   );
   end component;
   
-  component twoToOne
+  component decode
   port (
     clk_i     : in  std_logic;
     rst_i     : in  std_logic;
@@ -83,7 +83,7 @@ begin
 
   waitforstart_rdy <= wait_rdy;
 
-  inst_md16: md16
+  inst_singleDouble : singleDouble
   port map(
     clk_i   => clk_i,
     ce_i    => wait_rdy,
@@ -95,7 +95,7 @@ begin
 
   recieved_debug <= md16_q_o;
 
-  inst_twoToOne: twoToOne
+  inst_decode: decode
   port map(
     clk_i     => clk_i,
     rst_i     => rst_i,
@@ -105,5 +105,5 @@ begin
     nd_o      => ready_o
   );   
    
-end behavioral;
+end;
 
