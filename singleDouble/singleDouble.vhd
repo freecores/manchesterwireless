@@ -18,6 +18,8 @@
 --  --------  ----------  --------------------  ----------------
 --  1.0       20/02/09    J. Rodriguez-Navarro  Initial revision
 --  1.1       21/06/09    M. Thiagarajan        Modified with FSM
+--  1.2       25/06/09    M. Thiagarajan        Modified Nxt State Logic
+--                                              to avoid inferring latch
 --  Future revisions tracked in Subversion at OpenCores.org
 --  under the manchesterwireless project
 -----------------------------------------------------------------------------
@@ -149,7 +151,10 @@ architecture behavioral of singleDouble is
         when CNT1   =>
           count_ones_en    <= '1';
           count_zeros_en   <= '0';
-        when others    => null;
+        --when others    => null;
+        when others    => 
+          count_ones_en    <= '0';
+          count_zeros_en   <= '0';
     end case;
   end process;
 
