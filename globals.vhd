@@ -9,11 +9,11 @@ package globals is
   -- then:
 
   -- single is nominally 23200
-  constant INTERVAL_MIN_SINGLE: integer := 10000;
+  constant INTERVAL_MIN_SINGLE: integer := 34000;--10000
   constant INTERVAL_MAX_SINGLE: integer := 65000;
   
   -- double is nominally 43000-50000
-  constant INTERVAL_MIN_DOUBLE: integer := 90000;--80000
+  constant INTERVAL_MIN_DOUBLE: integer := 80000;--90000
   constant INTERVAL_MAX_DOUBLE: integer := 120000;
 
   constant INTERVAL_QUADRUPLE: integer  := 650000;--350000

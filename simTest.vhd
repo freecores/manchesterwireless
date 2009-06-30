@@ -8,7 +8,7 @@ end testSim;
 
 architecture Behavioral of testSim is
 
-  component decodeManchester
+  component manchesterWireless
   port (
     clk_i             : in  std_logic;
     rst_i             : in  std_logic;
@@ -54,7 +54,7 @@ begin
   reset_manchester <=  rst_i or soft_reset;
   ready_o <= ready_o_buff;
 
-  inst_decodeManchester: decodeManchester
+  inst_manchesterWireless: manchesterWireless
   port map(
     clk_i   => clk_i,
     rst_i   => reset_manchester,
