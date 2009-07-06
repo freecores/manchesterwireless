@@ -17,6 +17,9 @@
 --  Revision  Date        Author                Comment
 --  --------  ----------  --------------------  ----------------
 --  1.0       20/02/09    J. Rodriguez-Navarro  Initial revision
+--  1.1       21/06/09    M. Thiagarajan        Modified with FSM
+--  1.2       25/06/09    M. Thiagarajan        Modified Nxt State Logic
+--                                              to avoid inferring latch
 --  Future revisions tracked in Subversion at OpenCores.org
 --  under the manchesterwireless project
 -----------------------------------------------------------------------------
@@ -44,103 +47,135 @@ end;
 
 architecture behavioral of singleDouble is
 
-  signal transition_n:   std_logic;
-  signal transition_i:   std_logic;
-
-  signal count_ones    : integer range 0 to INTERVAL_MAX_DOUBLE;
-  signal count_ones_n  : integer range 0 to INTERVAL_MAX_DOUBLE;
-  signal count_zeros   : integer range 0 to INTERVAL_MAX_DOUBLE;
-  signal count_zeros_n : integer range 0 to INTERVAL_MAX_DOUBLE;
-
   signal single_one:      std_logic;
   signal double_one:      std_logic;
   signal single_zero:     std_logic;
   signal double_zero:     std_logic;
+  signal count_ones    : integer range 0 to INTERVAL_MAX_DOUBLE;
+  signal count_zeros   : integer range 0 to INTERVAL_MAX_DOUBLE;
 
   signal data_i_d  :         std_logic;
   signal data_i_d2 :         std_logic;
-  signal data_i_d3 :         std_logic;
-  signal data_i_d3b:         std_logic;
+
+  signal    ct_state, nxt_state  : bit_vector(2 downto 0);
+  signal    ce_i_RT, data_i_RT, data_i_FT : std_logic;
+  signal    ce_i_d, ce_i_d2               : std_logic;
+  signal    count_zeros_en, count_ones_en : std_logic;
+  constant  IDLE: bit_vector(2 downto 0) := "001";
+  constant  CNT0: bit_vector(2 downto 0) := "010";
+  constant  CNT1: bit_vector(2 downto 0) := "100";
 
   begin
+    process (clk_i,rst_i)
+    begin
+      if (rst_i = '1') then
+        ce_i_d  <= '0';
+        ce_i_d2 <= '0';
+      elsif (clk_i'event and clk_i = '1') then
+        ce_i_d    <= ce_i;
+        ce_i_d2  <= ce_i_d;
+      end if;
+    end process;
+    ce_i_RT   <= ce_i_d and (not(ce_i_d2));  --CE rising edge
 
-  --------------------------------------------------------------------------------
-  -- SEQUENTIAL ------------------------------------------------------------------
-  --------------------------------------------------------------------------------
+    process (clk_i,rst_i)
+    begin
+      if (rst_i = '1') then
+        data_i_d  <= '0';
+        data_i_d2 <= '0';
+      elsif (clk_i'event and clk_i = '1') then
+        data_i_d  <= data_i;
+        data_i_d2  <= data_i_d;
+      end if;
+    end process;
+    data_i_RT   <= data_i_d and (not(data_i_d2));  --Data rising edge
+    data_i_FT   <= (not data_i_d) and data_i_d2;  --Data falling edge
 
-  -- Domain Clock (clk_i)
-  process (rst_i, clk_i)
-  begin
+    ready_o     <= ((data_i_RT or data_i_FT) and ce_i) or ce_i_RT;
 
-    if rst_i = '1' then
-      data_i_d        <= '1';
-      data_i_d2       <= '1';
-      data_i_d3       <= '1';
-      transition_i    <= '0';
-      count_ones      <= 0;
-      count_zeros     <= 0;
-    elsif (rising_edge(clk_i) and ce_i = '1') then -- posedge
-      data_i_d3       <= data_i_d2;
-      data_i_d2       <= data_i_d;
-      data_i_d        <= data_i;
-      transition_i    <= transition_n;
-      count_ones      <= count_ones_n;
-      count_zeros     <= count_zeros_n;
-    end if;
+    process (clk_i,rst_i)  --State register
+    begin
+      if (rst_i = '1') then
+        ct_state <= IDLE;
+      elsif (clk_i'event and clk_i = '1') then
+        ct_state <= nxt_state;
+      end if;
+    end process;
 
+    process (ct_state,ce_i_RT,data_i,ce_i,data_i_FT,data_i_RT)  --Next State logic
+    begin
+      case ct_state is
+          when IDLE   =>
+            if ((ce_i_RT = '1') and (data_i = '0'))then
+              nxt_State <= CNT0;
+            elsif ((ce_i_RT = '1') and (data_i = '1')) then
+              nxt_state <= CNT1;
+            else
+              nxt_state <= IDLE;
+            end if;
+
+          when CNT0   =>
+            if (ce_i = '0') then
+              nxt_state <= IDLE;
+            elsif (data_i_RT = '1') then
+              nxt_state <= CNT1;
+            else
+              nxt_state <= CNT0;
+            end if;
+
+          when CNT1   =>
+            if (ce_i = '0') then
+              nxt_state <= IDLE;
+            elsif (data_i_FT = '1') then
+              nxt_state <= CNT0;
+            else
+              nxt_state <= CNT1;
+            end if;
+
+          when others   =>
+            nxt_state <=  IDLE;
+      end case;
+    end process;
+
+    process (ct_state)  --State output logic
+    begin
+      case ct_state is
+        when IDLE   =>
+          count_ones_en    <= '0';
+          count_zeros_en   <= '0';
+
+        when CNT0   =>
+          count_ones_en    <= '0';
+          count_zeros_en   <= '1';
+
+        when CNT1   =>
+          count_ones_en    <= '1';
+          count_zeros_en   <= '0';
+        --when others    => null;
+        when others    => 
+          count_ones_en    <= '0';
+          count_zeros_en   <= '0';
+    end case;
   end process;
 
-
-  --------------------------------------------------------------------------------
-  -- COMBINATIONAL ---------------------------------------------------------------
-  --------------------------------------------------------------------------------
-
-  -- Mark transition when an edge on data_i is detected
-  transition_n <=  data_i_d xor data_i_d2;
-  ready_o <= transition_i; -- buffered transition_n
-
-  -- Invert and count zeroes
-  data_i_d3b <= not data_i_d3;
-
-  --
-  -- Increment counters between transitions every posedge clk_i
-  --
-  process (transition_i, data_i_d3, data_i_d3b, count_ones, count_zeros)
+  process (clk_i,rst_i)  --counters
   begin
-
-    if transition_i = '1' then
-      count_ones_n  <= 0;
-      count_zeros_n <= 0;
-    else
-      count_ones_n  <= count_ones + conv_integer(data_i_d3);
-      count_zeros_n <= count_zeros + conv_integer(data_i_d3b);
-    end if;
-
-  end process;
-
-  --
-  -- map single/double one/zero to output
-  --
-  transition : process (transition_i, rst_i)
-  begin
-
     if (rst_i = '1') then
-      q_o <= "0000"; -- protocol dictates an inital one. used in connecting entity
-    elsif rising_edge(transition_i) then
-      q_o(0) <= single_one;
-      q_o(1) <= double_one;
-      q_o(2) <= single_zero;
-      q_o(3) <= double_zero;  
+      count_ones    <=  0;
+      count_zeros   <=  0;
+    elsif (clk_i'event and clk_i = '1') then
+      if (count_zeros_en = '1') then
+        count_zeros   <= count_zeros + 1;
+        count_ones    <= 0;
+      elsif (count_ones_en = '1') then
+        count_ones   <= count_ones + 1;
+        count_zeros    <= 0;
+      end if;
     end if;
-
   end process;
 
-  --
-  -- unsigned comparators
-  --
   process(count_ones)
   begin
-
     if (count_ones >= INTERVAL_MIN_DOUBLE) and (count_ones <= INTERVAL_MAX_DOUBLE) then
       double_one <= '1';
     else
@@ -151,12 +186,10 @@ architecture behavioral of singleDouble is
     else
       single_one <= '0';
     end if;
-
   end process;
 
   process(count_zeros)
   begin
-
     if (count_zeros >= INTERVAL_MIN_DOUBLE) and (count_zeros <= INTERVAL_MAX_DOUBLE) then
       double_zero <= '1';
     else
@@ -167,9 +200,14 @@ architecture behavioral of singleDouble is
     else
       single_zero <= '0';
     end if;
-
   end process;
 
+  process (rst_i,data_i_RT,data_i_FT)
+  begin
+    if (rst_i = '1') then
+      q_o   <= "0000";
+    else
+      q_o   <= double_zero & single_zero & double_one & single_one;
+    end if;
+  end process;
 end;
-
-
