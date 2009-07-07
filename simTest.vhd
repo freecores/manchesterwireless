@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use std.textio.all;
 
 use work.globals.all;
 
@@ -32,7 +33,7 @@ architecture Behavioral of testSim is
   
   signal clk_i             : std_logic;
   signal rst_i             : std_logic := '1';
-  signal data_i            : std_logic;
+  --signal data_i            : std_logic;
   signal ready_o           : std_logic;
   signal character_o       : std_logic_vector(0 to 7);
   signal anode_ctrl        : std_logic_vector(3 downto 0);
@@ -46,7 +47,13 @@ architecture Behavioral of testSim is
   constant half_period : time := 10 ns;
   constant period : time := 2*half_period;
   constant mid_single : time := (INTERVAL_MIN_SINGLE+INTERVAL_MAX_SINGLE)/2*period;
-  constant WORD : std_logic_vector(28 downto 0) := "01100101100101010101010101010";  
+  constant WORD : std_logic_vector(28 downto 0) := "01100101100101010101010101010";
+
+  ----------Added by Thiag-------------
+  file      TEST_IP       : TEXT open READ_MODE is "six.dat";
+  signal data_i           : std_ulogic;
+  constant  BIT_PERIOD    : time  :=  100 us;
+  -------------------------------------
 
 begin
   character_o(7) <= '1'; -- turn off decimal point
@@ -137,7 +144,7 @@ begin
      if rst_i = '1' then
        char_select <= 0;
        counter := 0;
-       div_clk := '0';
+       --div_clk := '0';
        soft_reset <= '0';
      elsif (clk_i'event and clk_i = '1') then
        -- register the output
@@ -183,32 +190,52 @@ begin
                   "1101" when 2,
                   "1110" when 3; 
                
+  --process
+  --begin
+  --  wait for 5*period;
+  --  rst_i <= '0';
+
+  --  -- begin transmission header 
+  --  data_i <= '1';
+  --  wait for 5*MID_SINGLE;
+  --  
+  --  data_i <= '0';
+  --  wait for MID_SINGLE;
+  --  -- end transmission header
+
+  --  for i in WORD'left downto 0 loop
+  --    data_i <= WORD(i);
+  --    wait for MID_SINGLE;
+  --  end loop;
+
+  --  data_i <= '1';
+  --  wait for MID_SINGLE;
+  -- 
+  --  rst_i <= '1';
+  --  wait for 5*period;
+
+  --end process;
+  
   process
+  variable  LINE_BUF      : LINE;
+  variable  IP_BIT        : BIT;
   begin
     wait for 5*period;
     rst_i <= '0';
 
-    -- begin transmission header 
-    data_i <= '1';
-    wait for 5*MID_SINGLE;
-    
-    data_i <= '0';
-    wait for MID_SINGLE;
-    -- end transmission header
-
-    for i in WORD'left downto 0 loop
-      data_i <= WORD(i);
-      wait for MID_SINGLE;
+    while not ENDFILE (TEST_IP) loop
+      READLINE (TEST_IP,LINE_BUF);
+      while (LINE_BUF'LENGTH /= 0) loop
+        READ(LINE_BUF,IP_BIT);
+        data_i  <= TO_STDULOGIC(IP_BIT);
+        wait for BIT_PERIOD;
+      end loop;
     end loop;
-
-    data_i <= '1';
-    wait for MID_SINGLE;
-   
-    rst_i <= '1';
-    wait for 5*period;
-
+    assert (FALSE)
+      report "End of Input Data"
+      severity ERROR;
   end process;
-  
+    
   clock : process
   begin
     clk_i <= '1';
@@ -217,7 +244,7 @@ begin
       clk_i <= not clk_i;
     end loop;
   end process; 
-               
+
 end Behavioral;
 
 
