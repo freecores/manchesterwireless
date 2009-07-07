@@ -202,7 +202,7 @@ architecture behavioral of singleDouble is
     end if;
   end process;
 
-  process (rst_i,data_i_RT,data_i_FT)
+  process (rst_i,data_i_RT,data_i_FT,double_zero,single_zero,double_one,single_one)
   begin
     if (rst_i = '1') then
       q_o   <= "0000";
